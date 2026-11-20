@@ -123,6 +123,10 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   const [preferencesOpen, setPreferencesOpen] = useState(false)
   const [readingText, setReadingText] = useState<string | null>(null)
   const reading = readingText !== null
+  const editThen = useCallback((run: () => void): void => {
+    setReadingText(null)
+    requestAnimationFrame(run)
+  }, [])
   const descriptionAi = useDescriptionAi()
   const [review, setReview] = useState<ReviewStatus>(idleReviewStatus)
   const [controls, setControls] = useState<ReviewControls | null>(null)
@@ -158,25 +162,35 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     (notice: ReviewNotice) =>
       showToast(
         notice.text,
-        notice.retry ? [{ label: 'Retry', run: notice.retry }] : [],
+        notice.retry
+          ? [
+              {
+                label: 'Retry',
+                run: () => editThen(notice.retry ?? (() => {})),
+              },
+            ]
+          : [],
       ),
-    [showToast],
+    [showToast, editThen],
   )
   const onFailure = useCallback(
     (notice: FailureNotice) =>
       showToast(notice.text, [
-        { label: 'Retry', run: notice.retry },
-        { label: 'Show', run: notice.show },
+        { label: 'Retry', run: () => editThen(notice.retry) },
+        { label: 'Show', run: () => editThen(notice.show) },
       ]),
-    [showToast],
+    [showToast, editThen],
   )
   const onHistoryEvent = useCallback(
     (event: HistoryEvent) => applyHistoryEvent(history, event),
     [history],
   )
   const focusEditor = useCallback(
-    () => documentControls?.focus(),
-    [documentControls],
+    () =>
+      reading
+        ? document.querySelector<HTMLElement>('.reading-view')?.focus()
+        : documentControls?.focus(),
+    [documentControls, reading],
   )
   const closeHistoryRef = useRef<() => void>(() => undefined)
   const closeHistoryLater = useCallback(() => closeHistoryRef.current(), [])
@@ -207,20 +221,20 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
-  const leaveReading = (): void => setReadingText(null)
   const toggleReading = (): void => {
     closeHistoryLater()
     if (reading) {
       setReadingText(null)
       requestAnimationFrame(() => documentControls?.focus())
     } else {
-      setReadingText(documentControls?.text() ?? '')
+      if (documentControls) setReadingText(documentControls.text())
     }
   }
   const onReadingShortcut = useEffectEvent(toggleReading)
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (
+        event.repeat ||
         isModalOpen(document) ||
         isFieldOutsideEditor(event.target) ||
         !isReadingShortcut(event, detectApplePlatform())
@@ -570,19 +584,18 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
       save: (saveAs) => void file.save(saveAs),
       showProblems: showFrontmatterProblems,
       openPreferences: () => setPreferencesOpen(true),
-      review: () => {
-        leaveReading()
-        setReviewFormOpen(true)
-      },
+      review: () => editThen(() => setReviewFormOpen(true)),
       stopReview: () => reviewControls?.stop(),
-      acceptAll: () => {
-        leaveReading()
-        reviewControls?.acceptAll()
-      },
-      rejectAll: () => {
-        leaveReading()
-        reviewControls?.rejectAll()
-      },
+      acceptAll: () =>
+        editThen(() => {
+          documentControls?.focus()
+          reviewControls?.acceptAll()
+        }),
+      rejectAll: () =>
+        editThen(() => {
+          documentControls?.focus()
+          reviewControls?.rejectAll()
+        }),
       toggleReading,
     },
   ).map((menu) =>

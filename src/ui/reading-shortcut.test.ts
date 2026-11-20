@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { isReadingShortcut } from './reading-shortcut'
+import { isReadingShortcut, readingShortcutLabel } from './reading-shortcut'
 
 const key = (init: Partial<KeyboardEvent>) =>
   ({
     key: 'v',
+    code: 'KeyV',
     ctrlKey: false,
     metaKey: false,
     altKey: false,
@@ -41,5 +42,25 @@ describe('isReadingShortcut', () => {
         false,
       ),
     ).toBe(false)
+  })
+
+  it('follows the key position, not the layout', () => {
+    expect(
+      isReadingShortcut(
+        key({ key: 'м', ctrlKey: true, shiftKey: true }),
+        false,
+      ),
+    ).toBe(true)
+    expect(
+      isReadingShortcut(
+        key({ key: 'v', code: 'KeyB', ctrlKey: true, shiftKey: true }),
+        false,
+      ),
+    ).toBe(false)
+  })
+
+  it('labels the shortcut per platform', () => {
+    expect(readingShortcutLabel(false)).toBe('Ctrl+Shift+V')
+    expect(readingShortcutLabel(true)).toBe('⇧⌘V')
   })
 })

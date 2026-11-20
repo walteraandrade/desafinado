@@ -208,7 +208,10 @@ const childNodes = (node: SyntaxNode): readonly SyntaxNode[] => {
 const named = (node: SyntaxNode, name: string): SyntaxNode | undefined =>
   childNodes(node).find((child) => child.name === name)
 
-type Source = { readonly text: string }
+type Source = {
+  readonly text: string
+  readonly definitions: ReadonlyMap<string, string>
+}
 
 const NO_SKIP: ReadonlySet<string> = new Set()
 
@@ -320,6 +323,44 @@ const convertCode = (node: SyntaxNode, source: Source): MarkdownNode => {
 
 const LINK_PARTS: ReadonlySet<string> = new Set(['URL'])
 
+const normalizeLabel = (label: string): string =>
+  label
+    .replace(/^\[|\]$/g, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+
+const labelOf = (node: SyntaxNode, source: Source): string => {
+  const label = named(node, 'LinkLabel')
+  return normalizeLabel(
+    label === undefined
+      ? source.text.slice(node.from, node.to)
+      : source.text.slice(label.from, label.to),
+  )
+}
+
+const definitionsIn = (
+  tree: SyntaxNode,
+  text: string,
+): ReadonlyMap<string, string> => {
+  const found: [string, string][] = []
+  const visit = (node: SyntaxNode): void => {
+    if (node.name === 'LinkReference') {
+      const label = named(node, 'LinkLabel')
+      const url = named(node, 'URL')
+      if (label && url)
+        found.push([
+          normalizeLabel(text.slice(label.from, label.to)),
+          text.slice(url.from, url.to),
+        ])
+      return
+    }
+    for (const child of childNodes(node)) visit(child)
+  }
+  visit(tree)
+  return new Map(found.reverse())
+}
+
 const urlOf = (node: SyntaxNode, source: Source): string => {
   const url = named(node, 'URL')
   return url === undefined ? '' : source.text.slice(url.from, url.to)
@@ -329,7 +370,15 @@ const SPECIAL: Readonly<
   Record<string, (node: SyntaxNode, source: Source) => readonly MarkdownNode[]>
 > = {
   Document: (node, source) => inner(node, source),
-  Task: (node, source) => inner(node, source),
+  Task: (node, source) => {
+    const [marker, ...rest] = inner(node, source)
+    const [first, ...others] = rest
+    return marker === undefined
+      ? []
+      : first?.kind === 'text'
+        ? [marker, text(first.text.trimStart()), ...others]
+        : [marker, ...rest]
+  },
   TaskMarker: (node, source) => [
     element('input', [], {
       checked: /x/i.test(source.text.slice(node.from, node.to)),
@@ -350,11 +399,13 @@ const SPECIAL: Readonly<
   FencedCode: (node, source) => [convertCode(node, source)],
   CodeBlock: (node, source) => [convertCode(node, source)],
   Table: (node, source) => [convertTable(node, source)],
-  Link: (node, source) => [
-    element('a', inner(node, source, LINK_PARTS), {
-      title: urlOf(node, source),
-    }),
-  ],
+  Link: (node, source) => {
+    const url =
+      urlOf(node, source) || source.definitions.get(labelOf(node, source)) || ''
+    return url === ''
+      ? [text(source.text.slice(node.from, node.to))]
+      : [element('a', inner(node, source, LINK_PARTS), { title: url })]
+  },
   Image: (node, source) => [
     element('span', inner(node, source, LINK_PARTS), { image: true }),
   ],
@@ -394,5 +445,8 @@ export const markdownTree = (raw: string): readonly MarkdownNode[] => {
   const body =
     frontmatter === undefined ? markdown : markdown.slice(frontmatter.to)
   const tree = markdownLanguage.parser.parse(body)
-  return convert(tree.topNode, { text: body })
+  return convert(tree.topNode, {
+    text: body,
+    definitions: definitionsIn(tree.topNode, body),
+  })
 }

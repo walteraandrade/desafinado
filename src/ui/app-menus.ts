@@ -1,5 +1,6 @@
 import type { Menu, MenuItem } from './MenuBar'
 import { formatShortcut } from './platform'
+import { readingShortcutLabel } from './reading-shortcut'
 
 export type AppMenuState = {
   readonly apple: boolean
@@ -83,7 +84,14 @@ const fileMenu = (
 }
 
 const editMenu = (
-  { apple, reviewReady, reviewRunning, openSuggestions, reading }: AppMenuState,
+  {
+    apple,
+    documentReady,
+    reviewReady,
+    reviewRunning,
+    openSuggestions,
+    reading,
+  }: AppMenuState,
   actions: AppMenuActions,
 ): Menu => ({
   label: 'Edit',
@@ -108,7 +116,8 @@ const editMenu = (
     },
     {
       label: reading ? 'Edit text' : 'Reading view',
-      shortcut: apple ? '⇧⌘V' : 'Ctrl+Shift+V',
+      shortcut: readingShortcutLabel(apple),
+      disabled: !documentReady,
       separated: true,
       onSelect: actions.toggleReading,
     },

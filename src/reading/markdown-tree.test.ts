@@ -61,7 +61,7 @@ describe('markdownTree', () => {
       markdownTree('- [x] done\n- open\n\n1. first\n\n> quoted\n> more\n'),
     ).toEqual([
       el('ul', [
-        el('li', [el('input', [], { checked: true }), text(' done')]),
+        el('li', [el('input', [], { checked: true }), text('done')]),
         el('li', [text('open')]),
       ]),
       el('ol', [el('li', [text('first')])]),
@@ -133,7 +133,7 @@ describe('markdownTree', () => {
         '[foo][bar]\n\n[bar]: http://x "T"\n\n<!--\nx\n-->\n\ntext\n',
       ),
     ).toEqual([
-      el('p', [el('a', [text('foo')], { title: '' })]),
+      el('p', [el('a', [text('foo')], { title: 'http://x' })]),
       el('p', [text('text')]),
     ])
   })
@@ -155,5 +155,23 @@ describe('markdownTree', () => {
 
   it('leaves a surrogate reference as written', () => {
     expect(markdownTree('&#xD800;\n')).toEqual([el('p', [text('&#xD800;')])])
+  })
+
+  it('keeps brackets that are not links', () => {
+    expect(markdownTree('[not a link] and [a][nope]\n')).toEqual([
+      el('p', [text('[not a link] and [a][nope]')]),
+    ])
+  })
+
+  it('resolves a shortcut reference link', () => {
+    expect(markdownTree('[Baz]\n\n[baz]: https://b.example\n')).toEqual([
+      el('p', [el('a', [text('Baz')], { title: 'https://b.example' })]),
+    ])
+  })
+
+  it('hides HTML comments, as a rendered page would', () => {
+    expect(markdownTree('a <!-- note --> b\n')).toEqual([
+      el('p', [text('a  b')]),
+    ])
   })
 })
