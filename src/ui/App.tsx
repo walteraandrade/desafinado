@@ -7,7 +7,6 @@ import {
   useState,
 } from 'react'
 import { resolveModel } from '../ai/default-model'
-import { quickActionsFor } from '../ai/quick-actions'
 import type { DocumentControls } from '../editor/document-controls'
 import {
   beforeReviewChanges,
@@ -24,6 +23,7 @@ import { formatClock } from '../history/time'
 import type { VersionSummary } from '../history/types'
 import type { PlatformKit } from '../platform/kit'
 import { problemMessage } from '../platform/problems'
+import { quickActionsForFile } from '../skills/file-quick-actions'
 import {
   describeFrontmatterProblem,
   reportProblems,
@@ -35,7 +35,7 @@ import {
   skillOfFile,
 } from '../skills/library-view'
 import type { NewSkillOutcome } from '../skills/new-skill'
-import { isSkillFile, SKILL_FILE_NAME } from '../skills/scan-skills'
+import { SKILL_FILE_NAME } from '../skills/scan-skills'
 import type { SkillField } from '../skills/skill-frontmatter'
 import { noticeMessage } from '../suggestions/notice'
 import type { SuggestionNotice } from '../suggestions/types'
@@ -480,10 +480,9 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   const quickActions = useQuickActions(kit.quickActions, () =>
     showToast('Quick actions could not be saved.'),
   )
-  const isSkill = isSkillFile(frontmatterFileName)
   const editorQuickActions = useMemo(
-    () => quickActionsFor(isSkill, quickActions.enabled),
-    [isSkill, quickActions.enabled],
+    () => quickActionsForFile(frontmatterFileName, quickActions.enabled),
+    [frontmatterFileName, quickActions.enabled],
   )
 
   const shown =
