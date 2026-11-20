@@ -10,6 +10,7 @@ import {
 } from './fake-file-system'
 import {
   DEFAULT_MAX_DEPTH,
+  isSkillFile,
   type RootScan,
   type ScanOptions,
   scanSkillRoots,
@@ -705,5 +706,21 @@ describe('scanSkillRoots', () => {
       [...new Set(all.map((s) => s.realPath))].sort(),
     )
     expect(all).toHaveLength(12 + 6)
+  })
+})
+
+describe('isSkillFile', () => {
+  it('is true for a SKILL.md only', () => {
+    expect(isSkillFile('SKILL.md')).toBe(true)
+  })
+
+  it('is false for other Markdown files, even with a frontmatter', () => {
+    expect(isSkillFile('README.md')).toBe(false)
+    expect(isSkillFile('skill.md')).toBe(false)
+    expect(isSkillFile('notes.markdown')).toBe(false)
+  })
+
+  it('is false for a Document with no file', () => {
+    expect(isSkillFile(null)).toBe(false)
   })
 })

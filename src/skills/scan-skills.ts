@@ -47,6 +47,9 @@ type Visit = {
 
 export const SKILL_FILE_NAME = 'SKILL.md'
 
+export const isSkillFile = (fileName: string | null): boolean =>
+  fileName === SKILL_FILE_NAME
+
 export const DEFAULT_MAX_DEPTH = 3
 
 const BYTE_ORDER_MARK = /^﻿/

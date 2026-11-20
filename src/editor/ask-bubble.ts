@@ -12,11 +12,7 @@ import {
   type Tooltip,
   type TooltipView,
 } from '@codemirror/view'
-import {
-  DEFAULT_QUICK_ACTIONS,
-  type QuickAction,
-  quickActionsFor,
-} from '../ai/quick-actions'
+import { DEFAULT_QUICK_ACTIONS, type QuickAction } from '../ai/quick-actions'
 import {
   freeTextInstruction,
   quickActionInstruction,
@@ -34,7 +30,7 @@ import {
   moveAskMenu,
   typeAskMenu,
 } from './ask-menu'
-import { currentTarget, frontmatterOfDoc } from './current-target'
+import { currentTarget } from './current-target'
 import { el } from './dom'
 import { cycleTab } from './focus-cycle'
 import { interactionField } from './interaction-state'
@@ -152,10 +148,7 @@ let bubbleCount = 0
 
 const buildBubble = (view: EditorView) => {
   const actions = () => view.state.facet(suggestionActionsFacet)
-  const quickActions = quickActionsFor(
-    frontmatterOfDoc(view.state.doc) !== undefined,
-    view.state.facet(quickActionsFacet),
-  )
+  const quickActions = view.state.facet(quickActionsFacet)
   bubbleCount += 1
   const listId = `cm-ai-ask-list-${bubbleCount}`
   const hintId = `${listId}-hint`
