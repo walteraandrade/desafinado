@@ -174,4 +174,18 @@ describe('markdownTree', () => {
       el('p', [text('a  b')]),
     ])
   })
+
+  it('keeps the text after a comment on its line', () => {
+    expect(markdownTree('<!--x-->text\n')).toEqual([el('p', [text('text')])])
+  })
+
+  it('resolves a collapsed reference and drops angle brackets', () => {
+    expect(markdownTree('[a][] and [b](<c d>)\n\n[a]: <http://x>\n')).toEqual([
+      el('p', [
+        el('a', [text('a')], { title: 'http://x' }),
+        text(' and '),
+        el('a', [text('b')], { title: 'c d' }),
+      ]),
+    ])
+  })
 })

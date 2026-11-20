@@ -3,8 +3,8 @@ import { isReadingShortcut, readingShortcutLabel } from './reading-shortcut'
 
 const key = (init: Partial<KeyboardEvent>) =>
   ({
-    key: 'v',
-    code: 'KeyV',
+    key: 'r',
+    code: 'KeyR',
     ctrlKey: false,
     metaKey: false,
     altKey: false,
@@ -13,32 +13,35 @@ const key = (init: Partial<KeyboardEvent>) =>
   }) as KeyboardEvent
 
 describe('isReadingShortcut', () => {
-  it('is Ctrl+Shift+V, or Cmd+Shift+V on Apple platforms', () => {
-    expect(
-      isReadingShortcut(
-        key({ key: 'V', ctrlKey: true, shiftKey: true }),
-        false,
-      ),
-    ).toBe(true)
-    expect(
-      isReadingShortcut(key({ metaKey: true, shiftKey: true }), true),
-    ).toBe(true)
-    expect(
-      isReadingShortcut(key({ metaKey: true, shiftKey: true }), false),
-    ).toBe(false)
-    expect(
-      isReadingShortcut(key({ ctrlKey: true, shiftKey: true }), true),
-    ).toBe(false)
-  })
-
-  it('leaves plain paste and other keys alone', () => {
-    expect(isReadingShortcut(key({ ctrlKey: true }), false)).toBe(false)
-    expect(isReadingShortcut(key({ key: 'V', shiftKey: true }), false)).toBe(
-      false,
+  it('is Ctrl+Alt+R, or Option+Cmd+R on Apple platforms', () => {
+    expect(isReadingShortcut(key({ ctrlKey: true, altKey: true }), false)).toBe(
+      true,
     )
     expect(
+      isReadingShortcut(key({ key: '®', metaKey: true, altKey: true }), true),
+    ).toBe(true)
+    expect(isReadingShortcut(key({ metaKey: true, altKey: true }), false)).toBe(
+      false,
+    )
+    expect(isReadingShortcut(key({ ctrlKey: true, altKey: true }), true)).toBe(
+      false,
+    )
+  })
+
+  it('leaves reload, paste and other keys alone', () => {
+    expect(isReadingShortcut(key({ ctrlKey: true }), false)).toBe(false)
+    expect(
+      isReadingShortcut(key({ ctrlKey: true, shiftKey: true }), false),
+    ).toBe(false)
+    expect(
       isReadingShortcut(
-        key({ ctrlKey: true, shiftKey: true, altKey: true }),
+        key({ ctrlKey: true, altKey: true, shiftKey: true }),
+        false,
+      ),
+    ).toBe(false)
+    expect(
+      isReadingShortcut(
+        key({ key: 'v', code: 'KeyV', ctrlKey: true, altKey: true }),
         false,
       ),
     ).toBe(false)
@@ -46,21 +49,12 @@ describe('isReadingShortcut', () => {
 
   it('follows the key position, not the layout', () => {
     expect(
-      isReadingShortcut(
-        key({ key: 'м', ctrlKey: true, shiftKey: true }),
-        false,
-      ),
+      isReadingShortcut(key({ key: 'к', ctrlKey: true, altKey: true }), false),
     ).toBe(true)
-    expect(
-      isReadingShortcut(
-        key({ key: 'v', code: 'KeyB', ctrlKey: true, shiftKey: true }),
-        false,
-      ),
-    ).toBe(false)
   })
 
   it('labels the shortcut per platform', () => {
-    expect(readingShortcutLabel(false)).toBe('Ctrl+Shift+V')
-    expect(readingShortcutLabel(true)).toBe('⇧⌘V')
+    expect(readingShortcutLabel(false)).toBe('Ctrl+Alt+R')
+    expect(readingShortcutLabel(true)).toBe('⌥⌘R')
   })
 })

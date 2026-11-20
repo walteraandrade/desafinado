@@ -54,7 +54,6 @@ const SKIPPED = new Set([
   'StrikethroughMark',
   'TableDelimiter',
   'Comment',
-  'CommentBlock',
   'ProcessingInstruction',
   'LinkReference',
 ])
@@ -332,10 +331,18 @@ const normalizeLabel = (label: string): string =>
 
 const labelOf = (node: SyntaxNode, source: Source): string => {
   const label = named(node, 'LinkLabel')
-  return normalizeLabel(
+  const own =
     label === undefined
-      ? source.text.slice(node.from, node.to)
-      : source.text.slice(label.from, label.to),
+      ? ''
+      : normalizeLabel(source.text.slice(label.from, label.to))
+  if (own !== '') return own
+  const close = childNodes(node).find(
+    (child) =>
+      child.name === 'LinkMark' &&
+      source.text.slice(child.from, child.to) === ']',
+  )
+  return normalizeLabel(
+    source.text.slice(node.from + 1, close?.from ?? node.to),
   )
 }
 
@@ -351,7 +358,7 @@ const definitionsIn = (
       if (label && url)
         found.push([
           normalizeLabel(text.slice(label.from, label.to)),
-          text.slice(url.from, url.to),
+          unbracket(text.slice(url.from, url.to)),
         ])
       return
     }
@@ -361,9 +368,12 @@ const definitionsIn = (
   return new Map(found.reverse())
 }
 
+const unbracket = (url: string): string =>
+  url.startsWith('<') && url.endsWith('>') ? url.slice(1, -1) : url
+
 const urlOf = (node: SyntaxNode, source: Source): string => {
   const url = named(node, 'URL')
-  return url === undefined ? '' : source.text.slice(url.from, url.to)
+  return url === undefined ? '' : unbracket(source.text.slice(url.from, url.to))
 }
 
 const SPECIAL: Readonly<
@@ -411,6 +421,13 @@ const SPECIAL: Readonly<
   ],
   URL: (node, source) => [text(source.text.slice(node.from, node.to))],
   Escape: (node, source) => [text(source.text.slice(node.from + 1, node.to))],
+  CommentBlock: (node, source) => {
+    const raw = source.text.slice(node.from, node.to)
+    const after = raw.slice(raw.lastIndexOf('-->') + 3).trim()
+    return raw.includes('-->') && after !== ''
+      ? [element('p', [text(after)])]
+      : []
+  },
   Entity: (node, source) => [
     text(decodeEntity(source.text.slice(node.from, node.to))),
   ],

@@ -652,3 +652,9 @@ html.title-bar {
 .reading-image::after {
   content: "]";
 }
+
+.reading-view table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}

@@ -601,6 +601,16 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   ).map((menu) =>
     menu.label === 'Edit' ? { ...menu, buttonRef: reviewTriggerRef } : menu,
   )
+  const toolbarControls = useMemo<ReviewControls | null>(
+    () =>
+      reviewControls && {
+        start: (focus) => editThen(() => reviewControls.start(focus)),
+        stop: reviewControls.stop,
+        acceptAll: () => editThen(reviewControls.acceptAll),
+        rejectAll: () => editThen(reviewControls.rejectAll),
+      },
+    [reviewControls, editThen],
+  )
   const headerCommands = (
     <>
       <FileControls
@@ -612,7 +622,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
       />
       <ReviewToolbar
         status={review}
-        controls={reviewControls}
+        controls={toolbarControls}
         triggerRef={reviewTriggerRef}
       />
       <SettingsButton onClick={() => setPreferencesOpen(true)} />
@@ -644,7 +654,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
             ) : (
               <ReviewToolbar
                 status={review}
-                controls={reviewControls}
+                controls={toolbarControls}
                 triggerRef={reviewTriggerRef}
                 trigger={false}
               />
