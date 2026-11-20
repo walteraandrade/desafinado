@@ -169,18 +169,13 @@ const element = (
 })
 
 const mergeText = (nodes: readonly MarkdownNode[]): readonly MarkdownNode[] =>
-  nodes.flatMap((node, index) => {
-    const previous = nodes[index - 1]
-    if (node.kind === 'text' && previous?.kind === 'text') return []
-    if (node.kind !== 'text') return [node]
-    const run = nodes.slice(index).findIndex((next) => next.kind !== 'text')
-    const texts = nodes.slice(index, run === -1 ? undefined : index + run)
-    return [
-      text(
-        texts.map((next) => (next.kind === 'text' ? next.text : '')).join(''),
-      ),
-    ]
-  })
+  nodes.reduce<MarkdownNode[]>((merged, node) => {
+    const last = merged.at(-1)
+    if (node.kind === 'text' && last?.kind === 'text')
+      merged[merged.length - 1] = text(last.text + node.text)
+    else merged.push(node)
+    return merged
+  }, [])
 
 const trimEdges = (nodes: readonly MarkdownNode[]): readonly MarkdownNode[] =>
   nodes

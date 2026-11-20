@@ -39,7 +39,13 @@ const render = (nodes: readonly MarkdownNode[]): ReactNode[] =>
   )
 
 export function ReadingView({ text }: { readonly text: string }) {
-  const content = useMemo(() => render(markdownTree(text)), [text])
+  const content = useMemo(() => {
+    try {
+      return render(markdownTree(text))
+    } catch {
+      return [createElement('pre', { key: 'raw' }, text)]
+    }
+  }, [text])
   const article = useRef<HTMLElement>(null)
   useEffect(() => article.current?.focus({ preventScroll: true }), [])
   return (

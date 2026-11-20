@@ -84,6 +84,7 @@ src/
 ├── suggestions/   # Suggestion state, lifecycle, position mapping (pure)
 ├── diff/          # adaptive diff (pure)
 ├── blocks/        # Block extraction from the syntax tree (pure)
+├── reading/       # Reading view: Markdown syntax tree → safe node tree (pure)
 ├── ai/            # model client, zod schemas, prompt building, AI call records
 └── ui/            # React components
 electron/

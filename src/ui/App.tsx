@@ -123,7 +123,14 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   const [preferencesOpen, setPreferencesOpen] = useState(false)
   const [readingText, setReadingText] = useState<string | null>(null)
   const reading = readingText !== null
+  const readingRef = useRef(false)
+  readingRef.current = reading
+  const reviewFormOpenRef = useRef(false)
   const editThen = useCallback((run: () => void): void => {
+    if (!readingRef.current) {
+      run()
+      return
+    }
     setReadingText(null)
     requestAnimationFrame(run)
   }, [])
@@ -166,7 +173,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
           ? [
               {
                 label: 'Retry',
-                run: () => editThen(notice.retry ?? (() => {})),
+                run: () => notice.retry && editThen(notice.retry),
               },
             ]
           : [],
@@ -222,12 +229,15 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
   const toggleReading = (): void => {
+    if (reviewFormOpenRef.current) return
     closeHistoryLater()
     if (reading) {
       setReadingText(null)
       requestAnimationFrame(() => documentControls?.focus())
     } else {
-      if (documentControls) setReadingText(documentControls.text())
+      if (!documentControls) return
+      setReadingText(documentControls.text())
+      window.scrollTo({ top: 0 })
     }
   }
   const onReadingShortcut = useEffectEvent(toggleReading)
@@ -556,6 +566,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   }, [])
 
   const [reviewFormOpen, setReviewFormOpen] = useState(false)
+  reviewFormOpenRef.current = reviewFormOpen
   const closeReviewForm = useCallback(() => {
     setReviewFormOpen(false)
     reviewTriggerRef.current?.focus()

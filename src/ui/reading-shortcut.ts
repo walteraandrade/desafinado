@@ -5,7 +5,8 @@ export const isReadingShortcut = (
   event.code === 'KeyR' &&
   (apple ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey) &&
   event.altKey &&
-  !event.shiftKey
+  !event.shiftKey &&
+  !event.getModifierState?.('AltGraph')
 
 const FIELDS =
   'input, textarea, select, [contenteditable]:not([contenteditable="false"])'

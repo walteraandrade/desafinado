@@ -57,4 +57,12 @@ describe('isReadingShortcut', () => {
     expect(readingShortcutLabel(false)).toBe('Ctrl+Alt+R')
     expect(readingShortcutLabel(true)).toBe('⌥⌘R')
   })
+
+  it('leaves AltGr+R to the keyboard layout', () => {
+    const altGr = {
+      ...key({ ctrlKey: true, altKey: true }),
+      getModifierState: (state: string) => state === 'AltGraph',
+    } as KeyboardEvent
+    expect(isReadingShortcut(altGr, false)).toBe(false)
+  })
 })
