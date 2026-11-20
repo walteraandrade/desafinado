@@ -95,4 +95,26 @@ describe('markdownTree', () => {
   it('shows HTML as text', () => {
     expect(markdownTree('<b>x</b>\n')).toEqual([el('p', [text('<b>x</b>')])])
   })
+
+  it('keeps the paragraphs of a loose list item apart', () => {
+    expect(markdownTree('- first\n\n  second\n')).toEqual([
+      el('ul', [
+        el('li', [el('p', [text('first')]), el('p', [text('second')])]),
+      ]),
+    ])
+  })
+
+  it('keeps the number an ordered list starts at', () => {
+    expect(markdownTree('3. third\n4. fourth\n')).toEqual([
+      el('ol', [el('li', [text('third')]), el('li', [text('fourth')])], {
+        start: '3',
+      }),
+    ])
+  })
+
+  it('decodes numeric and common named character references', () => {
+    expect(markdownTree('&#65;&#x42; &copy; &mdash; &bogus;\n')).toEqual([
+      el('p', [text('AB © — &bogus;')]),
+    ])
+  })
 })

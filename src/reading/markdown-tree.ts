@@ -83,13 +83,41 @@ const TRIMMED: ReadonlySet<MarkdownTag> = new Set([
 const VOID: ReadonlySet<MarkdownTag> = new Set(['br', 'hr', 'input'])
 
 const ENTITIES: Readonly<Record<string, string>> = {
-  '&amp;': '&',
-  '&lt;': '<',
-  '&gt;': '>',
-  '&quot;': '"',
-  '&#39;': "'",
-  '&apos;': "'",
-  '&nbsp;': ' ',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+  copy: '©',
+  reg: '®',
+  trade: '™',
+  hellip: '…',
+  mdash: '—',
+  ndash: '–',
+  lsquo: '‘',
+  rsquo: '’',
+  ldquo: '“',
+  rdquo: '”',
+  laquo: '«',
+  raquo: '»',
+  deg: '°',
+  times: '×',
+  middot: '·',
+  bull: '•',
+  euro: '€',
+}
+
+const NUMERIC = /^&#(?:x([0-9a-f]+)|([0-9]+));$/i
+
+const decodeEntity = (raw: string): string => {
+  const numeric = NUMERIC.exec(raw)
+  if (numeric !== null) {
+    const hex = numeric[1]
+    const code = Number.parseInt(hex ?? numeric[2] ?? '', hex ? 16 : 10)
+    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : raw
+  }
+  return ENTITIES[raw.slice(1, -1)] ?? raw
 }
 
 const HEADINGS: Readonly<Record<string, MarkdownTag>> = {
@@ -271,9 +299,18 @@ const SPECIAL: Readonly<
       checked: /x/i.test(source.text.slice(node.from, node.to)),
     }),
   ],
-  ListItem: (node, source) => [
-    element('li', unwrapParagraphs(inner(node, source))),
-  ],
+  ListItem: (node, source) => {
+    const children = inner(node, source)
+    const paragraphs = children.filter(
+      (child) => child.kind === 'element' && child.tag === 'p',
+    )
+    return [
+      element(
+        'li',
+        paragraphs.length > 1 ? children : unwrapParagraphs(children),
+      ),
+    ]
+  },
   FencedCode: (node, source) => [convertCode(node, source)],
   CodeBlock: (node, source) => [convertCode(node, source)],
   Table: (node, source) => [convertTable(node, source)],
@@ -287,9 +324,21 @@ const SPECIAL: Readonly<
   ],
   URL: (node, source) => [text(source.text.slice(node.from, node.to))],
   Escape: (node, source) => [text(source.text.slice(node.from + 1, node.to))],
-  Entity: (node, source) => {
-    const raw = source.text.slice(node.from, node.to)
-    return [text(ENTITIES[raw] ?? raw)]
+  Entity: (node, source) => [
+    text(decodeEntity(source.text.slice(node.from, node.to))),
+  ],
+  OrderedList: (node, source) => {
+    const mark = node.firstChild && named(node.firstChild, 'ListMark')
+    const start = mark
+      ? Number.parseInt(source.text.slice(mark.from, mark.to), 10)
+      : 1
+    return [
+      element(
+        'ol',
+        inner(node, source),
+        Number.isNaN(start) || start === 1 ? {} : { start: String(start) },
+      ),
+    ]
   },
 }
 

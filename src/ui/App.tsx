@@ -208,6 +208,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
   const toggleReading = (): void => {
+    closeHistoryLater()
     if (reading) {
       setReadingText(null)
       requestAnimationFrame(() => documentControls?.focus())
@@ -218,7 +219,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   const onReadingShortcut = useEffectEvent(toggleReading)
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (!isReadingShortcut(event)) return
+      if (isModalOpen(document) || !isReadingShortcut(event)) return
       event.preventDefault()
       onReadingShortcut()
     }
@@ -443,6 +444,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   )
   const showFrontmatterProblems = useCallback(() => {
     closeHistory()
+    setReadingText(null)
     requestAnimationFrame(() => frontmatterPanel.current?.focus())
   }, [closeHistory])
   const [newSkillOpen, setNewSkillOpen] = useState(false)

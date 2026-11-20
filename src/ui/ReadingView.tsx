@@ -13,11 +13,13 @@ const attributesOf = (
       }
     : node.tag === 'pre' && typeof node.attrs.language === 'string'
       ? { 'data-language': node.attrs.language }
-      : node.tag === 'a'
-        ? { title: node.attrs.title }
-        : node.tag === 'span' && node.attrs.image === true
-          ? { className: 'reading-image' }
-          : {}
+      : node.tag === 'ol' && typeof node.attrs.start === 'string'
+        ? { start: Number(node.attrs.start) }
+        : node.tag === 'a'
+          ? { title: node.attrs.title }
+          : node.tag === 'span' && node.attrs.image === true
+            ? { className: 'reading-image' }
+            : {}
 
 const render = (nodes: readonly MarkdownNode[]): ReactNode[] =>
   nodes.map((node, index) =>
