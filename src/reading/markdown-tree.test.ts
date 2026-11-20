@@ -188,4 +188,14 @@ describe('markdownTree', () => {
       ]),
     ])
   })
+
+  it('strips the one space that pads a code span', () => {
+    expect(markdownTree('`` a`b `` and ` x`\n')).toEqual([
+      el('p', [
+        el('code', [text('a`b')]),
+        text(' and '),
+        el('code', [text(' x')]),
+      ]),
+    ])
+  })
 })

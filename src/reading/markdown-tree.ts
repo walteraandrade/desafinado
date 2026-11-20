@@ -141,7 +141,6 @@ const SIMPLE: Readonly<Record<string, MarkdownTag>> = {
   StrongEmphasis: 'strong',
   Emphasis: 'em',
   Strikethrough: 'del',
-  InlineCode: 'code',
   BulletList: 'ul',
   OrderedList: 'ol',
   ListItem: 'li',
@@ -422,6 +421,13 @@ const SPECIAL: Readonly<
     return raw.includes('-->') && after !== ''
       ? [element('p', [text(after)])]
       : []
+  },
+  InlineCode: (node, source) => {
+    const code = inner(node, source)
+      .map((child) => (child.kind === 'text' ? child.text : ''))
+      .join('')
+    const padded = /^ .*[^ ].* $/s.test(code)
+    return [element('code', [text(padded ? code.slice(1, -1) : code)])]
   },
   Entity: (node, source) => [
     text(decodeEntity(source.text.slice(node.from, node.to))),

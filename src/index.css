@@ -627,6 +627,9 @@ html.title-bar {
 }
 
 .reading-view table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
 }
 
@@ -653,8 +656,6 @@ html.title-bar {
   content: "]";
 }
 
-.reading-view table {
-  display: block;
-  max-width: 100%;
-  overflow-x: auto;
+.reading-view :is(blockquote, li) > * + * {
+  margin-top: 0.75rem;
 }
