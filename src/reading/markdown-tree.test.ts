@@ -117,4 +117,43 @@ describe('markdownTree', () => {
       el('p', [text('AB © — &bogus;')]),
     ])
   })
+
+  it('keeps every line of code inside lists, quotes and indented blocks', () => {
+    expect(markdownTree('    a\n    b\n\n\n    c\n')).toEqual([
+      el('pre', [el('code', [text('a\nb\n\n\nc')])]),
+    ])
+    expect(markdownTree('> ```\n> a\n>\n> b\n> ```\n')).toEqual([
+      el('blockquote', [el('pre', [el('code', [text('a\n\nb')])])]),
+    ])
+  })
+
+  it('leaves out link definitions and comment blocks', () => {
+    expect(
+      markdownTree(
+        '[foo][bar]\n\n[bar]: http://x "T"\n\n<!--\nx\n-->\n\ntext\n',
+      ),
+    ).toEqual([
+      el('p', [el('a', [text('foo')], { title: '' })]),
+      el('p', [text('text')]),
+    ])
+  })
+
+  it('keeps empty table cells in their column', () => {
+    expect(markdownTree('|a|b|\n|-|-|\n||2|\n')).toEqual([
+      el('table', [
+        el('thead', [el('tr', [el('th', [text('a')]), el('th', [text('b')])])]),
+        el('tbody', [el('tr', [el('td'), el('td', [text('2')])])]),
+      ]),
+    ])
+  })
+
+  it('reads CRLF and a byte order mark, frontmatter included', () => {
+    expect(markdownTree('\uFEFF---\r\ntitle: x\r\n---\r\n# H\r\n')).toEqual([
+      el('h1', [text('H')]),
+    ])
+  })
+
+  it('leaves a surrogate reference as written', () => {
+    expect(markdownTree('&#xD800;\n')).toEqual([el('p', [text('&#xD800;')])])
+  })
 })

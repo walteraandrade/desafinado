@@ -12,21 +12,33 @@ const key = (init: Partial<KeyboardEvent>) =>
   }) as KeyboardEvent
 
 describe('isReadingShortcut', () => {
-  it('is Ctrl+Shift+V or Cmd+Shift+V', () => {
+  it('is Ctrl+Shift+V, or Cmd+Shift+V on Apple platforms', () => {
     expect(
-      isReadingShortcut(key({ key: 'V', ctrlKey: true, shiftKey: true })),
+      isReadingShortcut(
+        key({ key: 'V', ctrlKey: true, shiftKey: true }),
+        false,
+      ),
     ).toBe(true)
     expect(
-      isReadingShortcut(key({ key: 'v', metaKey: true, shiftKey: true })),
+      isReadingShortcut(key({ metaKey: true, shiftKey: true }), true),
     ).toBe(true)
+    expect(
+      isReadingShortcut(key({ metaKey: true, shiftKey: true }), false),
+    ).toBe(false)
+    expect(
+      isReadingShortcut(key({ ctrlKey: true, shiftKey: true }), true),
+    ).toBe(false)
   })
 
   it('leaves plain paste and other keys alone', () => {
-    expect(isReadingShortcut(key({ key: 'v', ctrlKey: true }))).toBe(false)
-    expect(isReadingShortcut(key({ key: 'V', shiftKey: true }))).toBe(false)
+    expect(isReadingShortcut(key({ ctrlKey: true }), false)).toBe(false)
+    expect(isReadingShortcut(key({ key: 'V', shiftKey: true }), false)).toBe(
+      false,
+    )
     expect(
       isReadingShortcut(
-        key({ key: 'V', ctrlKey: true, shiftKey: true, altKey: true }),
+        key({ ctrlKey: true, shiftKey: true, altKey: true }),
+        false,
       ),
     ).toBe(false)
   })

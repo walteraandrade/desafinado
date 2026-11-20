@@ -1,4 +1,10 @@
-import { createElement, type ReactNode, useMemo } from 'react'
+import {
+  createElement,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react'
 import { type MarkdownNode, markdownTree } from '../reading/markdown-tree'
 
 const attributesOf = (
@@ -9,14 +15,14 @@ const attributesOf = (
         type: 'checkbox',
         checked: node.attrs.checked === true,
         disabled: true,
-        readOnly: true,
+        'aria-label': node.attrs.checked === true ? 'Done' : 'Not done',
       }
     : node.tag === 'pre' && typeof node.attrs.language === 'string'
       ? { 'data-language': node.attrs.language }
       : node.tag === 'ol' && typeof node.attrs.start === 'string'
         ? { start: Number(node.attrs.start) }
         : node.tag === 'a'
-          ? { title: node.attrs.title }
+          ? { title: node.attrs.title, tabIndex: 0 }
           : node.tag === 'span' && node.attrs.image === true
             ? { className: 'reading-image' }
             : {}
@@ -34,8 +40,15 @@ const render = (nodes: readonly MarkdownNode[]): ReactNode[] =>
 
 export function ReadingView({ text }: { readonly text: string }) {
   const content = useMemo(() => render(markdownTree(text)), [text])
+  const article = useRef<HTMLElement>(null)
+  useEffect(() => article.current?.focus({ preventScroll: true }), [])
   return (
-    <article className="reading-view" aria-label="Reading view">
+    <article
+      ref={article}
+      tabIndex={-1}
+      className="reading-view focus:outline-none"
+      aria-label="Reading view"
+    >
       {content}
     </article>
   )

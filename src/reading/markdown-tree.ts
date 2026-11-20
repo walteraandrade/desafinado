@@ -54,7 +54,9 @@ const SKIPPED = new Set([
   'StrikethroughMark',
   'TableDelimiter',
   'Comment',
+  'CommentBlock',
   'ProcessingInstruction',
+  'LinkReference',
 ])
 
 const BLOCK_CONTAINERS = new Set([
@@ -115,7 +117,9 @@ const decodeEntity = (raw: string): string => {
   if (numeric !== null) {
     const hex = numeric[1]
     const code = Number.parseInt(hex ?? numeric[2] ?? '', hex ? 16 : 10)
-    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : raw
+    const valid =
+      code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff)
+    return valid ? String.fromCodePoint(code) : raw
   }
   return ENTITIES[raw.slice(1, -1)] ?? raw
 }
@@ -234,42 +238,74 @@ const unwrapParagraphs = (
     node.kind === 'element' && node.tag === 'p' ? node.children : [node],
   )
 
+const cellsOf = (row: SyntaxNode): readonly (SyntaxNode | undefined)[] => {
+  const children = childNodes(row)
+  const lead = children[0]?.name === 'TableDelimiter' ? 1 : 0
+  return children.slice(lead).reduce<{
+    readonly cells: readonly (SyntaxNode | undefined)[]
+    readonly open: boolean
+  }>(
+    ({ cells, open }, child) =>
+      child.name === 'TableCell'
+        ? { cells: cells.concat([child]), open: false }
+        : child.name === 'TableDelimiter'
+          ? { cells: open ? cells.concat([undefined]) : cells, open: true }
+          : { cells, open },
+    { cells: [], open: true },
+  ).cells
+}
+
 const tableRow = (
   row: SyntaxNode,
   source: Source,
   cell: MarkdownTag,
-): MarkdownNode =>
-  element(
+  width: number,
+): MarkdownNode => {
+  const cells = cellsOf(row)
+  return element(
     'tr',
-    childNodes(row)
-      .filter((child) => child.name === 'TableCell')
-      .map((child) => element(cell, inner(child, source))),
+    Array.from({ length: width }, (_, index) => {
+      const found = cells[index]
+      return element(cell, found ? inner(found, source) : [])
+    }),
   )
+}
 
 const convertTable = (node: SyntaxNode, source: Source): MarkdownNode => {
   const rows = childNodes(node)
   const header = rows.filter((row) => row.name === 'TableHeader')
   const body = rows.filter((row) => row.name === 'TableRow')
+  const width = Math.max(1, ...header.map((row) => cellsOf(row).length))
   return element('table', [
     element(
       'thead',
-      header.map((row) => tableRow(row, source, 'th')),
+      header.map((row) => tableRow(row, source, 'th', width)),
     ),
     ...(body.length === 0
       ? []
       : [
           element(
             'tbody',
-            body.map((row) => tableRow(row, source, 'td')),
+            body.map((row) => tableRow(row, source, 'td', width)),
           ),
         ]),
   ])
 }
 
-const codeText = (node: SyntaxNode, source: Source): string => {
-  const code = named(node, 'CodeText')
-  return code === undefined ? '' : source.text.slice(code.from, code.to)
-}
+const codeText = (node: SyntaxNode, source: Source): string =>
+  childNodes(node)
+    .filter((child) => child.name === 'CodeText')
+    .map((child, index, lines) => {
+      const previous = lines[index - 1]
+      const gap =
+        previous === undefined
+          ? ''
+          : '\n'.repeat(
+              source.text.slice(previous.to, child.from).split('\n').length - 1,
+            )
+      return gap + source.text.slice(child.from, child.to)
+    })
+    .join('')
 
 const convertCode = (node: SyntaxNode, source: Source): MarkdownNode => {
   const info = named(node, 'CodeInfo')
@@ -352,7 +388,8 @@ const convert = (node: SyntaxNode, source: Source): readonly MarkdownNode[] => {
     : [element(tag, inner(node, source))]
 }
 
-export const markdownTree = (markdown: string): readonly MarkdownNode[] => {
+export const markdownTree = (raw: string): readonly MarkdownNode[] => {
+  const markdown = raw.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n')
   const frontmatter = findFrontmatter(markdown)
   const body =
     frontmatter === undefined ? markdown : markdown.slice(frontmatter.to)

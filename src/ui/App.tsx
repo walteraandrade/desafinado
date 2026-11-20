@@ -72,7 +72,7 @@ import { isPreferencesShortcut } from './preferences-shortcut'
 import { ReadingView } from './ReadingView'
 import { ReviewForm } from './ReviewForm'
 import { ReviewToolbar } from './ReviewToolbar'
-import { isReadingShortcut } from './reading-shortcut'
+import { isFieldOutsideEditor, isReadingShortcut } from './reading-shortcut'
 import { SettingsButton } from './SettingsButton'
 import { Timeline } from './Timeline'
 import { TitleBar } from './TitleBar'
@@ -207,6 +207,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
+  const leaveReading = (): void => setReadingText(null)
   const toggleReading = (): void => {
     closeHistoryLater()
     if (reading) {
@@ -219,7 +220,12 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   const onReadingShortcut = useEffectEvent(toggleReading)
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (isModalOpen(document) || !isReadingShortcut(event)) return
+      if (
+        isModalOpen(document) ||
+        isFieldOutsideEditor(event.target) ||
+        !isReadingShortcut(event, detectApplePlatform())
+      )
+        return
       event.preventDefault()
       onReadingShortcut()
     }
@@ -344,6 +350,9 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   useEffect(() => {
     closeHistoryRef.current = closeHistory
   }, [closeHistory])
+  useEffect(() => {
+    if (mode.kind !== 'editing') setReadingText(null)
+  }, [mode.kind])
   const librarySkillFile =
     library === undefined ||
     openRef === null ||
@@ -561,10 +570,19 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
       save: (saveAs) => void file.save(saveAs),
       showProblems: showFrontmatterProblems,
       openPreferences: () => setPreferencesOpen(true),
-      review: () => setReviewFormOpen(true),
+      review: () => {
+        leaveReading()
+        setReviewFormOpen(true)
+      },
       stopReview: () => reviewControls?.stop(),
-      acceptAll: () => reviewControls?.acceptAll(),
-      rejectAll: () => reviewControls?.rejectAll(),
+      acceptAll: () => {
+        leaveReading()
+        reviewControls?.acceptAll()
+      },
+      rejectAll: () => {
+        leaveReading()
+        reviewControls?.rejectAll()
+      },
       toggleReading,
     },
   ).map((menu) =>
