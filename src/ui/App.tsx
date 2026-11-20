@@ -35,7 +35,7 @@ import {
   skillOfFile,
 } from '../skills/library-view'
 import type { NewSkillOutcome } from '../skills/new-skill'
-import { SKILL_FILE_NAME } from '../skills/scan-skills'
+import { isSkillFile } from '../skills/scan-skills'
 import type { SkillField } from '../skills/skill-frontmatter'
 import { noticeMessage } from '../suggestions/notice'
 import type { SuggestionNotice } from '../suggestions/types'
@@ -388,13 +388,12 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   const fileLabel = librarySkillFile?.label
   const frontmatterFileName =
     librarySkillFile?.file?.fileName ?? file.session?.name ?? null
-  const frontmatterFolderName =
-    frontmatterFileName !== SKILL_FILE_NAME
-      ? undefined
-      : (librarySkillFile?.file?.folderName ??
-        (library === undefined || openRef === null
-          ? undefined
-          : library.folderNameOf(openRef)))
+  const frontmatterFolderName = !isSkillFile(frontmatterFileName)
+    ? undefined
+    : (librarySkillFile?.file?.folderName ??
+      (library === undefined || openRef === null
+        ? undefined
+        : library.folderNameOf(openRef)))
   const frontmatter = useFrontmatterReport(initialDoc, documentControls, {
     fileName: frontmatterFileName,
     folderName: frontmatterFolderName,
