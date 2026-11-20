@@ -8,6 +8,7 @@ export type AppMenuState = {
   readonly reviewRunning: boolean
   readonly openSuggestions: number
   readonly problems: readonly string[]
+  readonly reading: boolean
 }
 
 export type AppMenuActions = {
@@ -20,6 +21,7 @@ export type AppMenuActions = {
   readonly stopReview: () => void
   readonly acceptAll: () => void
   readonly rejectAll: () => void
+  readonly toggleReading: () => void
 }
 
 const problemCount = (count: number): string =>
@@ -81,7 +83,7 @@ const fileMenu = (
 }
 
 const editMenu = (
-  { reviewReady, reviewRunning, openSuggestions }: AppMenuState,
+  { apple, reviewReady, reviewRunning, openSuggestions, reading }: AppMenuState,
   actions: AppMenuActions,
 ): Menu => ({
   label: 'Edit',
@@ -103,6 +105,12 @@ const editMenu = (
       label: 'Reject all suggestions',
       disabled: openSuggestions === 0,
       onSelect: actions.rejectAll,
+    },
+    {
+      label: reading ? 'Edit text' : 'Reading view',
+      shortcut: apple ? '⇧⌘V' : 'Ctrl+Shift+V',
+      separated: true,
+      onSelect: actions.toggleReading,
     },
   ],
 })

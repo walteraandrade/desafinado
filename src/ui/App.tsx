@@ -69,8 +69,10 @@ import { NewSkillDialog } from './NewSkillDialog'
 import { PreferencesDialog } from './PreferencesDialog'
 import { detectApplePlatform } from './platform'
 import { isPreferencesShortcut } from './preferences-shortcut'
+import { ReadingView } from './ReadingView'
 import { ReviewForm } from './ReviewForm'
 import { ReviewToolbar } from './ReviewToolbar'
+import { isReadingShortcut } from './reading-shortcut'
 import { SettingsButton } from './SettingsButton'
 import { Timeline } from './Timeline'
 import { TitleBar } from './TitleBar'
@@ -119,6 +121,8 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [modelOpen, setModelOpen] = useState(false)
   const [preferencesOpen, setPreferencesOpen] = useState(false)
+  const [readingText, setReadingText] = useState<string | null>(null)
+  const reading = readingText !== null
   const descriptionAi = useDescriptionAi()
   const [review, setReview] = useState<ReviewStatus>(idleReviewStatus)
   const [controls, setControls] = useState<ReviewControls | null>(null)
@@ -202,6 +206,25 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+  const toggleReading = (): void => {
+    if (reading) {
+      setReadingText(null)
+      requestAnimationFrame(() => documentControls?.focus())
+    } else {
+      setReadingText(documentControls?.text() ?? '')
+    }
+  }
+  const onReadingShortcut = useEffectEvent(toggleReading)
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!isReadingShortcut(event)) return
+      event.preventDefault()
+      onReadingShortcut()
+    }
+    window.addEventListener('keydown', onKeyDown, { capture: true })
+    return () =>
+      window.removeEventListener('keydown', onKeyDown, { capture: true })
   }, [])
   const libraryControls = useLibrary(library, showToast)
   const [libraryOpen, setLibraryOpen] = useState(false)
@@ -405,6 +428,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     (text: string) => {
       edited(text)
       refreshFrontmatter(text)
+      setReadingText((shown) => (shown === null ? null : text))
     },
     [edited, refreshFrontmatter],
   )
@@ -527,6 +551,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
       reviewRunning: review.running,
       openSuggestions: review.open,
       problems: frontmatterProblems,
+      reading,
     },
     {
       startNew: () => void file.startNew(),
@@ -538,6 +563,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
       stopReview: () => reviewControls?.stop(),
       acceptAll: () => reviewControls?.acceptAll(),
       rejectAll: () => reviewControls?.rejectAll(),
+      toggleReading,
     },
   ).map((menu) =>
     menu.label === 'Edit' ? { ...menu, buttonRef: reviewTriggerRef } : menu,
@@ -579,7 +605,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
-            <Hint />
+            <Hint reading={reading} />
             {titleBar === undefined ? (
               headerCommands
             ) : (
@@ -648,7 +674,10 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
             unsaved={skillUnsaved}
           />
         ) : null}
-        <div hidden={mode.kind !== 'editing'}>
+        {mode.kind === 'editing' && readingText !== null ? (
+          <ReadingView text={readingText} />
+        ) : null}
+        <div hidden={mode.kind !== 'editing' || reading}>
           <FrontmatterPanel
             report={frontmatter.report}
             disabled={documentControls === null}
