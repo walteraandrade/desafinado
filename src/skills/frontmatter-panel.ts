@@ -4,7 +4,7 @@ import {
   readFrontmatter,
   setSkillFields,
 } from './frontmatter-fields'
-import { SKILL_FILE_NAME } from './scan-skills'
+import { isSkillFile } from './scan-skills'
 import {
   type CheckedField,
   checkSkillFrontmatter,
@@ -144,7 +144,7 @@ export const inspectFrontmatter = (
   text: string,
   { fileName, folderName }: FrontmatterContext,
 ): FrontmatterReport => {
-  const skill = fileName === SKILL_FILE_NAME
+  const skill = isSkillFile(fileName)
   const reading = readFrontmatter(text)
   if (reading.kind === 'invalid') return unreadable(skill, reading.problem)
   if (!skill) return NONE
