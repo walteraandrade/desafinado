@@ -518,3 +518,144 @@ html.title-bar {
   font-family: inherit;
   font-size: 0.75rem;
 }
+
+.reading-view {
+  padding: 0.5rem 0 4rem;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+
+.reading-view > * + * {
+  margin-top: 1rem;
+}
+
+.reading-view :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 2rem;
+}
+
+.reading-view > :first-child {
+  margin-top: 0;
+}
+
+.reading-view h1 {
+  font-size: 1.85em;
+}
+
+.reading-view h2 {
+  font-size: 1.45em;
+}
+
+.reading-view h3 {
+  font-size: 1.2em;
+}
+
+.reading-view h4 {
+  font-size: 1.05em;
+}
+
+.reading-view :is(h5, h6) {
+  font-size: 1em;
+}
+
+.reading-view a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: help;
+}
+
+.reading-view code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background-color: var(--color-code-bg);
+  padding: 0.1em 0.3em;
+}
+
+.reading-view pre {
+  background-color: var(--color-code-bg);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+
+.reading-view pre code {
+  padding: 0;
+  background-color: transparent;
+}
+
+.reading-view :is(ul, ol) {
+  padding-left: 1.5rem;
+}
+
+.reading-view ul {
+  list-style: disc;
+}
+
+.reading-view ol {
+  list-style: decimal;
+}
+
+.reading-view li + li {
+  margin-top: 0.25rem;
+}
+
+.reading-view li:has(> input) {
+  list-style: none;
+  margin-left: -1.5rem;
+}
+
+.reading-view input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  margin-right: 0.25rem;
+}
+
+.reading-view blockquote {
+  border-left: 3px solid var(--color-hairline);
+  padding-left: 1rem;
+  color: var(--color-ink-muted);
+}
+
+.reading-view hr {
+  border: 0;
+  border-top: 1px solid var(--color-hairline);
+  margin: 2rem 0;
+}
+
+.reading-view table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.reading-view :is(th, td) {
+  border: 1px solid var(--color-hairline);
+  padding: 0.25rem 0.75rem;
+  text-align: left;
+}
+
+.reading-view th {
+  background-color: var(--color-raised);
+}
+
+.reading-image {
+  font-style: italic;
+  color: var(--color-ink-faint);
+}
+
+.reading-image::before {
+  content: "[image: ";
+}
+
+.reading-image::after {
+  content: "]";
+}
+
+.reading-view :is(blockquote, li) > * + * {
+  margin-top: 0.75rem;
+}

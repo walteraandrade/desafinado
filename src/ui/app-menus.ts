@@ -1,5 +1,6 @@
 import type { Menu, MenuItem } from './MenuBar'
 import { formatShortcut } from './platform'
+import { readingShortcutLabel } from './reading-shortcut'
 
 export type AppMenuState = {
   readonly apple: boolean
@@ -8,6 +9,7 @@ export type AppMenuState = {
   readonly reviewRunning: boolean
   readonly openSuggestions: number
   readonly problems: readonly string[]
+  readonly reading: boolean
 }
 
 export type AppMenuActions = {
@@ -20,6 +22,7 @@ export type AppMenuActions = {
   readonly stopReview: () => void
   readonly acceptAll: () => void
   readonly rejectAll: () => void
+  readonly toggleReading: () => void
 }
 
 const problemCount = (count: number): string =>
@@ -81,7 +84,14 @@ const fileMenu = (
 }
 
 const editMenu = (
-  { reviewReady, reviewRunning, openSuggestions }: AppMenuState,
+  {
+    apple,
+    documentReady,
+    reviewReady,
+    reviewRunning,
+    openSuggestions,
+    reading,
+  }: AppMenuState,
   actions: AppMenuActions,
 ): Menu => ({
   label: 'Edit',
@@ -103,6 +113,13 @@ const editMenu = (
       label: 'Reject all suggestions',
       disabled: openSuggestions === 0,
       onSelect: actions.rejectAll,
+    },
+    {
+      label: reading ? 'Edit text' : 'Reading view',
+      shortcut: readingShortcutLabel(apple),
+      disabled: !documentReady,
+      separated: true,
+      onSelect: actions.toggleReading,
     },
   ],
 })

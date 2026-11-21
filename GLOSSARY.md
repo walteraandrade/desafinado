@@ -49,4 +49,5 @@ Use these names in code, UI, PRs and issues. Avoid synonyms such as "edit", "pro
 | **AI call record** | Per-call log entry in `window.__aiCalls`, dev only: task, model, provider, tokens, cost, timings, finish reason, generation id. |
 | **Theme** | The colors the app paints with: 12 solid roles and a fixed mode, light or dark. Picked in Preferences. |
 | **Palette** | A Theme from the book: 2 Vol. 1 combinations of *A Dictionary of Color Combinations* that share a color, at least 6 colors, named after a Duke Ellington composition ([ADR 0017](docs/adr/0017-book-themes-and-solid-colors.md)). |
+| **Reading view** | The Document rendered as Markdown instead of edited: headings, lists, quotes, code and tables, without the frontmatter. Read only; links show their target on hover and never open. `Ctrl+Alt+R` / `Option+Cmd+R` or Edit > Reading view switches to it and back. |
 | **Preferences** | The screen for app settings: themes and Quick actions. Opens with `Ctrl+,`, a button in the Web build, and `File > Preferences…` in the Electron build. |

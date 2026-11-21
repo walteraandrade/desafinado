@@ -8,6 +8,7 @@ const state = (overrides: Partial<AppMenuState> = {}): AppMenuState => ({
   reviewRunning: false,
   openSuggestions: 0,
   problems: [],
+  reading: false,
   ...overrides,
 })
 
@@ -21,6 +22,7 @@ const actions = () => ({
   stopReview: vi.fn(),
   acceptAll: vi.fn(),
   rejectAll: vi.fn(),
+  toggleReading: vi.fn(),
 })
 
 const labels = (menu: { items: readonly { label: string }[] }) =>
@@ -49,6 +51,7 @@ describe('appMenus', () => {
       'Review…',
       'Accept all suggestions',
       'Reject all suggestions',
+      'Reading view',
     ])
   })
 
@@ -102,13 +105,25 @@ describe('appMenus', () => {
 
   it('enables Accept all and Reject all only with open suggestions', () => {
     const idle = appMenus(state(), actions())[1]
-    expect(idle?.items.slice(1).every((item) => item.disabled)).toBe(true)
+    expect(idle?.items.slice(1, 3).every((item) => item.disabled)).toBe(true)
     const busy = appMenus(state({ openSuggestions: 3 }), actions())[1]
-    expect(busy?.items.slice(1).some((item) => item.disabled)).toBe(false)
+    expect(busy?.items.slice(1, 3).some((item) => item.disabled)).toBe(false)
   })
 
   it('disables Review until the editor can review', () => {
     const [, edit] = appMenus(state({ reviewReady: false }), actions())
     expect(edit?.items[0]?.disabled).toBe(true)
+  })
+
+  it('toggles the Reading view from Edit', () => {
+    const wired = actions()
+    const [, editing] = appMenus(state(), wired)
+    const item = editing?.items.at(-1)
+    expect(item?.shortcut).toBe('Ctrl+Alt+R')
+    item?.onSelect()
+    expect(wired.toggleReading).toHaveBeenCalled()
+    const [, reading] = appMenus(state({ reading: true, apple: true }), wired)
+    expect(reading?.items.at(-1)?.label).toBe('Edit text')
+    expect(reading?.items.at(-1)?.shortcut).toBe('⌥⌘R')
   })
 })

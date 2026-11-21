@@ -70,8 +70,10 @@ import { NewSkillDialog } from './NewSkillDialog'
 import { PreferencesDialog } from './PreferencesDialog'
 import { detectApplePlatform } from './platform'
 import { isPreferencesShortcut } from './preferences-shortcut'
+import { ReadingView } from './ReadingView'
 import { ReviewForm } from './ReviewForm'
 import { ReviewToolbar } from './ReviewToolbar'
+import { isFieldOutsideEditor, isReadingShortcut } from './reading-shortcut'
 import { SettingsButton } from './SettingsButton'
 import { Timeline } from './Timeline'
 import { TitleBar } from './TitleBar'
@@ -120,6 +122,19 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [modelOpen, setModelOpen] = useState(false)
   const [preferencesOpen, setPreferencesOpen] = useState(false)
+  const [readingText, setReadingText] = useState<string | null>(null)
+  const reading = readingText !== null
+  const readingRef = useRef(false)
+  readingRef.current = reading
+  const reviewFormOpenRef = useRef(false)
+  const editThen = useCallback((run: () => void): void => {
+    if (!readingRef.current) {
+      run()
+      return
+    }
+    setReadingText(null)
+    requestAnimationFrame(run)
+  }, [])
   const descriptionAi = useDescriptionAi()
   const [review, setReview] = useState<ReviewStatus>(idleReviewStatus)
   const [controls, setControls] = useState<ReviewControls | null>(null)
@@ -155,25 +170,35 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     (notice: ReviewNotice) =>
       showToast(
         notice.text,
-        notice.retry ? [{ label: 'Retry', run: notice.retry }] : [],
+        notice.retry
+          ? [
+              {
+                label: 'Retry',
+                run: () => notice.retry && editThen(notice.retry),
+              },
+            ]
+          : [],
       ),
-    [showToast],
+    [showToast, editThen],
   )
   const onFailure = useCallback(
     (notice: FailureNotice) =>
       showToast(notice.text, [
-        { label: 'Retry', run: notice.retry },
-        { label: 'Show', run: notice.show },
+        { label: 'Retry', run: () => editThen(notice.retry) },
+        { label: 'Show', run: () => editThen(notice.show) },
       ]),
-    [showToast],
+    [showToast, editThen],
   )
   const onHistoryEvent = useCallback(
     (event: HistoryEvent) => applyHistoryEvent(history, event),
     [history],
   )
   const focusEditor = useCallback(
-    () => documentControls?.focus(),
-    [documentControls],
+    () =>
+      reading
+        ? document.querySelector<HTMLElement>('.reading-view')?.focus()
+        : documentControls?.focus(),
+    [documentControls, reading],
   )
   const closeHistoryRef = useRef<() => void>(() => undefined)
   const closeHistoryLater = useCallback(() => closeHistoryRef.current(), [])
@@ -203,6 +228,35 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+  const toggleReading = (): void => {
+    if (reviewFormOpenRef.current) return
+    closeHistoryLater()
+    if (reading) {
+      setReadingText(null)
+      requestAnimationFrame(() => documentControls?.focus())
+    } else {
+      if (!documentControls) return
+      setReadingText(documentControls.text())
+      window.scrollTo({ top: 0 })
+    }
+  }
+  const onReadingShortcut = useEffectEvent(toggleReading)
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (
+        event.repeat ||
+        isModalOpen(document) ||
+        isFieldOutsideEditor(event.target) ||
+        !isReadingShortcut(event, detectApplePlatform())
+      )
+        return
+      event.preventDefault()
+      onReadingShortcut()
+    }
+    window.addEventListener('keydown', onKeyDown, { capture: true })
+    return () =>
+      window.removeEventListener('keydown', onKeyDown, { capture: true })
   }, [])
   const libraryControls = useLibrary(library, showToast)
   const [libraryOpen, setLibraryOpen] = useState(false)
@@ -321,6 +375,9 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   useEffect(() => {
     closeHistoryRef.current = closeHistory
   }, [closeHistory])
+  useEffect(() => {
+    if (mode.kind !== 'editing') setReadingText(null)
+  }, [mode.kind])
   const librarySkillFile =
     library === undefined ||
     openRef === null ||
@@ -405,6 +462,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
     (text: string) => {
       edited(text)
       refreshFrontmatter(text)
+      setReadingText((shown) => (shown === null ? null : text))
     },
     [edited, refreshFrontmatter],
   )
@@ -419,6 +477,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   )
   const showFrontmatterProblems = useCallback(() => {
     closeHistory()
+    setReadingText(null)
     requestAnimationFrame(() => frontmatterPanel.current?.focus())
   }, [closeHistory])
   const [newSkillOpen, setNewSkillOpen] = useState(false)
@@ -511,6 +570,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
   }, [])
 
   const [reviewFormOpen, setReviewFormOpen] = useState(false)
+  reviewFormOpenRef.current = reviewFormOpen
   const closeReviewForm = useCallback(() => {
     setReviewFormOpen(false)
     reviewTriggerRef.current?.focus()
@@ -531,6 +591,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
       reviewRunning: review.running,
       openSuggestions: review.open,
       problems: frontmatterProblems,
+      reading,
     },
     {
       startNew: () => void file.startNew(),
@@ -538,13 +599,32 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
       save: (saveAs) => void file.save(saveAs),
       showProblems: showFrontmatterProblems,
       openPreferences: () => setPreferencesOpen(true),
-      review: () => setReviewFormOpen(true),
+      review: () => editThen(() => setReviewFormOpen(true)),
       stopReview: () => reviewControls?.stop(),
-      acceptAll: () => reviewControls?.acceptAll(),
-      rejectAll: () => reviewControls?.rejectAll(),
+      acceptAll: () =>
+        editThen(() => {
+          documentControls?.focus()
+          reviewControls?.acceptAll()
+        }),
+      rejectAll: () =>
+        editThen(() => {
+          documentControls?.focus()
+          reviewControls?.rejectAll()
+        }),
+      toggleReading,
     },
   ).map((menu) =>
     menu.label === 'Edit' ? { ...menu, buttonRef: reviewTriggerRef } : menu,
+  )
+  const toolbarControls = useMemo<ReviewControls | null>(
+    () =>
+      reviewControls && {
+        start: (focus) => editThen(() => reviewControls.start(focus)),
+        stop: reviewControls.stop,
+        acceptAll: () => editThen(reviewControls.acceptAll),
+        rejectAll: () => editThen(reviewControls.rejectAll),
+      },
+    [reviewControls, editThen],
   )
   const headerCommands = (
     <>
@@ -557,7 +637,7 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
       />
       <ReviewToolbar
         status={review}
-        controls={reviewControls}
+        controls={toolbarControls}
         triggerRef={reviewTriggerRef}
       />
       <SettingsButton onClick={() => setPreferencesOpen(true)} />
@@ -583,13 +663,13 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
-            <Hint />
+            <Hint reading={reading} />
             {titleBar === undefined ? (
               headerCommands
             ) : (
               <ReviewToolbar
                 status={review}
-                controls={reviewControls}
+                controls={toolbarControls}
                 triggerRef={reviewTriggerRef}
                 trigger={false}
               />
@@ -652,7 +732,10 @@ export function App<Ref>({ kit }: AppProps<Ref>) {
             unsaved={skillUnsaved}
           />
         ) : null}
-        <div hidden={mode.kind !== 'editing'}>
+        {mode.kind === 'editing' && readingText !== null ? (
+          <ReadingView text={readingText} />
+        ) : null}
+        <div hidden={mode.kind !== 'editing' || reading}>
           <FrontmatterPanel
             report={frontmatter.report}
             disabled={documentControls === null}
